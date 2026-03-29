@@ -6,18 +6,53 @@ services:
     ports:
       - "6379:6379"
 
+  postgres-user:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-user:/var/lib/postgresql/data
+
+  postgres-auction:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: auctiondb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-auction:/var/lib/postgresql/data
+
+  postgres-payment:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-payment:/var/lib/postgresql/data
+
   user-service:
     build: ./user-service
     ports:
       - "8081:8081"
     depends_on:
       - redis
+      - postgres-user
 
   auction-service:
     build: ./auction-service
     ports:
       - "8082:8082"
     depends_on:
+      - postgres-auction
       - user-service
 
   payment-service:
@@ -25,5 +60,11 @@ services:
     ports:
       - "8083:8083"
     depends_on:
+      - postgres-payment
       - user-service
       - auction-service
+
+volumes:
+  pgdata-user:
+  pgdata-auction:
+  pgdata-payment:

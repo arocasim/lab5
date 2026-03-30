@@ -1,12 +1,12 @@
-package ua.lpnu.auction_service.controller;
+package ua.lpnu.bid_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ua.lpnu.auction_service.dto.CreateBidRequest;
-import ua.lpnu.auction_service.dto.UpdateBidRequest;
-import ua.lpnu.auction_service.model.Bid;
-import ua.lpnu.auction_service.service.BidService;
+import ua.lpnu.bid_service.dto.CreateBidRequest;
+import ua.lpnu.bid_service.dto.UpdateBidRequest;
+import ua.lpnu.bid_service.model.Bid;
+import ua.lpnu.bid_service.service.BidService;
 
 import java.util.List;
 

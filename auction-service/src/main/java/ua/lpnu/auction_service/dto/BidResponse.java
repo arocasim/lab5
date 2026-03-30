@@ -1,11 +1,13 @@
-package ua.lpnu.payment_service.dto;
+package ua.lpnu.auction_service.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public class BidResponse {
 
     private Long id;
     private BigDecimal amount;
+    private Instant createdAt;
     private Long bidderId;
     private Long lotId;
 
@@ -18,6 +20,10 @@ public class BidResponse {
 
     public BigDecimal getAmount() {
         return amount;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     public Long getBidderId() {
@@ -34,6 +40,10 @@ public class BidResponse {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
     public void setBidderId(Long bidderId) {

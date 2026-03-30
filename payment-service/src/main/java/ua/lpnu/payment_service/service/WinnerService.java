@@ -3,7 +3,7 @@ package ua.lpnu.payment_service.service;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-import ua.lpnu.payment_service.client.AuctionClient;
+import ua.lpnu.payment_service.client.BidClient;
 import ua.lpnu.payment_service.dto.BidResponse;
 import ua.lpnu.payment_service.dto.CreateWinnerRequest;
 import ua.lpnu.payment_service.dto.UpdateWinnerRequest;
@@ -19,11 +19,11 @@ import java.util.List;
 public class WinnerService {
 
     private final WinnerRepository winnerRepository;
-    private final AuctionClient auctionClient;
+    private final BidClient bidClient;
 
-    public WinnerService(WinnerRepository winnerRepository, AuctionClient auctionClient) {
+    public WinnerService(WinnerRepository winnerRepository, BidClient bidClient) {
         this.winnerRepository = winnerRepository;
-        this.auctionClient = auctionClient;
+        this.bidClient = bidClient;
     }
 
     @Transactional
@@ -31,12 +31,12 @@ public class WinnerService {
         BidResponse bid;
 
         try {
-            bid = auctionClient.getBidById(request.getWinningBidId());
+            bid = bidClient.getBidById(request.getWinningBidId());
         } catch (FeignException.NotFound e) {
-            throw new NotFoundException("Bid not found in auction-service");
+            throw new NotFoundException("Bid not found in bid-service");
         }
 
-        if (bid.getLot() == null || !bid.getLot().getId().equals(request.getLotId())) {
+        if (bid.getLotId() == null || !bid.getLotId().equals(request.getLotId())) {
             throw new BadRequestException("Bid does not belong to the specified lot");
         }
 
@@ -73,12 +73,12 @@ public class WinnerService {
         BidResponse bid;
 
         try {
-            bid = auctionClient.getBidById(request.getWinningBidId());
+            bid = bidClient.getBidById(request.getWinningBidId());
         } catch (FeignException.NotFound e) {
-            throw new NotFoundException("Bid not found in auction-service");
+            throw new NotFoundException("Bid not found in bid-service");
         }
 
-        if (bid.getLot() == null || !bid.getLot().getId().equals(request.getLotId())) {
+        if (bid.getLotId() == null || !bid.getLotId().equals(request.getLotId())) {
             throw new BadRequestException("Bid does not belong to the specified lot");
         }
 

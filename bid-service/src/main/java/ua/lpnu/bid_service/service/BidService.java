@@ -1,17 +1,17 @@
-package ua.lpnu.auction_service.service;
+package ua.lpnu.bid_service.service;
 
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-import ua.lpnu.auction_service.client.UserClient;
-import ua.lpnu.auction_service.dto.CreateBidRequest;
-import ua.lpnu.auction_service.dto.UpdateBidRequest;
-import ua.lpnu.auction_service.exception.BadRequestException;
-import ua.lpnu.auction_service.exception.NotFoundException;
-import ua.lpnu.auction_service.model.Bid;
-import ua.lpnu.auction_service.model.Lot;
-import ua.lpnu.auction_service.repository.BidRepository;
-import ua.lpnu.auction_service.repository.LotRepository;
+import ua.lpnu.bid_service.client.AuctionClient;
+import ua.lpnu.bid_service.client.UserClient;
+import ua.lpnu.bid_service.dto.CreateBidRequest;
+import ua.lpnu.bid_service.dto.LotResponse;
+import ua.lpnu.bid_service.dto.UpdateBidRequest;
+import ua.lpnu.bid_service.exception.BadRequestException;
+import ua.lpnu.bid_service.exception.NotFoundException;
+import ua.lpnu.bid_service.model.Bid;
+import ua.lpnu.bid_service.repository.BidRepository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -21,19 +21,30 @@ import java.util.List;
 public class BidService {
 
     private final BidRepository bidRepo;
-    private final LotRepository lotRepo;
+    private final AuctionClient auctionClient;
     private final UserClient userClient;
 
-    public BidService(BidRepository bidRepo, LotRepository lotRepo, UserClient userClient) {
+    public BidService(BidRepository bidRepo, AuctionClient auctionClient, UserClient userClient) {
         this.bidRepo = bidRepo;
-        this.lotRepo = lotRepo;
+        this.auctionClient = auctionClient;
         this.userClient = userClient;
     }
 
     @Transactional
     public Bid create(CreateBidRequest req) {
-        Lot lot = lotRepo.findById(req.getLotId())
-                .orElseThrow(() -> new NotFoundException("Lot not found"));
+        LotResponse lot = fetchLot(req.getLotId());
+
+        if (!lot.isOpen()) {
+            throw new BadRequestException("Lot is closed, bids are no longer accepted");
+        }
+
+        if (lot.getAuction() == null || !lot.getAuction().isActive()) {
+            throw new BadRequestException("Auction is not active");
+        }
+
+        if (req.getUserId().equals(lot.getAuction().getSellerId())) {
+            throw new BadRequestException("Seller cannot bid on their own auction");
+        }
 
         try {
             userClient.getUserById(req.getUserId());
@@ -41,7 +52,7 @@ public class BidService {
             throw new NotFoundException("Bidder not found in user-service");
         }
 
-        BigDecimal minAllowed = calculateMinAllowed(lot);
+        BigDecimal minAllowed = calculateMinAllowed(req.getLotId(), lot);
 
         if (req.getAmount().compareTo(minAllowed) < 0) {
             throw new BadRequestException("Bid must be at least " + minAllowed);
@@ -51,7 +62,7 @@ public class BidService {
         bid.setAmount(req.getAmount());
         bid.setCreatedAt(Instant.now());
         bid.setBidderId(req.getUserId());
-        bid.setLot(lot);
+        bid.setLotId(req.getLotId());
 
         return bidRepo.save(bid);
     }
@@ -74,8 +85,7 @@ public class BidService {
         Bid bid = bidRepo.findById(id)
                 .orElseThrow(() -> new NotFoundException("Bid not found"));
 
-        Lot lot = lotRepo.findById(req.getLotId())
-                .orElseThrow(() -> new NotFoundException("Lot not found"));
+        LotResponse lot = fetchLot(req.getLotId());
 
         try {
             userClient.getUserById(req.getUserId());
@@ -83,7 +93,7 @@ public class BidService {
             throw new NotFoundException("Bidder not found in user-service");
         }
 
-        BigDecimal minAllowed = calculateMinAllowedForUpdate(lot, id);
+        BigDecimal minAllowed = calculateMinAllowedForUpdate(req.getLotId(), lot, id);
 
         if (req.getAmount().compareTo(minAllowed) < 0) {
             throw new BadRequestException("Bid must be at least " + minAllowed);
@@ -91,7 +101,7 @@ public class BidService {
 
         bid.setAmount(req.getAmount());
         bid.setBidderId(req.getUserId());
-        bid.setLot(lot);
+        bid.setLotId(req.getLotId());
 
         return bidRepo.save(bid);
     }
@@ -101,18 +111,25 @@ public class BidService {
         if (!bidRepo.existsById(id)) {
             throw new NotFoundException("Bid not found");
         }
-
         bidRepo.deleteById(id);
     }
 
-    private BigDecimal calculateMinAllowed(Lot lot) {
-        return bidRepo.findFirstByLotIdOrderByAmountDesc(lot.getId())
+    private LotResponse fetchLot(Long lotId) {
+        try {
+            return auctionClient.getLotById(lotId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("Lot not found in auction-service");
+        }
+    }
+
+    private BigDecimal calculateMinAllowed(Long lotId, LotResponse lot) {
+        return bidRepo.findFirstByLotIdOrderByAmountDesc(lotId)
                 .map(highest -> highest.getAmount().add(lot.getMinStep()))
                 .orElse(lot.getStartPrice());
     }
 
-    private BigDecimal calculateMinAllowedForUpdate(Lot lot, Long currentBidId) {
-        List<Bid> bids = bidRepo.findByLotId(lot.getId());
+    private BigDecimal calculateMinAllowedForUpdate(Long lotId, LotResponse lot, Long currentBidId) {
+        List<Bid> bids = bidRepo.findByLotId(lotId);
 
         BigDecimal highestOther = bids.stream()
                 .filter(b -> !b.getId().equals(currentBidId))

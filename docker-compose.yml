@@ -28,6 +28,17 @@ services:
     volumes:
       - pgdata-auction:/var/lib/postgresql/data
 
+  postgres-bid:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: biddb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata-bid:/var/lib/postgresql/data
+
   postgres-payment:
     image: postgres:16
     environment:
@@ -54,6 +65,15 @@ services:
     depends_on:
       - postgres-auction
       - user-service
+      - bid-service
+
+  bid-service:
+    build: ./bid-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres-bid
+      - user-service
 
   payment-service:
     build: ./payment-service
@@ -63,8 +83,10 @@ services:
       - postgres-payment
       - user-service
       - auction-service
+      - bid-service
 
 volumes:
   pgdata-user:
   pgdata-auction:
+  pgdata-bid:
   pgdata-payment:

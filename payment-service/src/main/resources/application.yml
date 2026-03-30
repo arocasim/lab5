@@ -22,3 +22,5 @@ services:
     url: http://user-service:8081
   auction:
     url: http://auction-service:8082
+  bid:
+    url: http://bid-service:8084

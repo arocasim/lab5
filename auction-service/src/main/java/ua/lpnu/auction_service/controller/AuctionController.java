@@ -45,4 +45,9 @@ public class AuctionController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/close")
+    public Auction close(@PathVariable Long id) {
+        return service.closeAuction(id);
+    }
 }

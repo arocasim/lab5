@@ -1,12 +1,12 @@
 server:
-  port: 8082
+  port: 8084
 
 spring:
   application:
-    name: auction-service
+    name: bid-service
 
   datasource:
-    url: jdbc:postgresql://postgres-auction:5432/auctiondb
+    url: jdbc:postgresql://postgres-bid:5432/biddb
     driver-class-name: org.postgresql.Driver
     username: postgres
     password: postgres
@@ -20,11 +20,5 @@ spring:
 services:
   user:
     url: http://user-service:8081
-  payment:
-    url: http://payment-service:8083
-  bid:
-    url: http://bid-service:8084
-
-auction:
-  scheduler:
-    interval: 60000
+  auction:
+    url: http://auction-service:8082

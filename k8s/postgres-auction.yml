@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgdata-auction
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-auction
+  labels:
+    app: postgres-auction
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-auction
+  template:
+    metadata:
+      labels:
+        app: postgres-auction
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: auctiondb
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: pgdata-auction
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-auction
+spec:
+  selector:
+    app: postgres-auction
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
